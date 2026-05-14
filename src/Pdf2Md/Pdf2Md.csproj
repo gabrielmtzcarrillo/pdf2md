@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>10</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>pdf2md</AssemblyName>
+    <RootNamespace>Pdf2Md</RootNamespace>
+    <Version>1.0.0</Version>
+    <Description>Converts PDF files to HTML or Markdown, with image extraction.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PdfPig" Version="0.1.14" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
+  </ItemGroup>
+
+</Project>
