@@ -10,6 +10,7 @@ A **C# 10** command-line tool built with [Spectre.Console](https://spectreconsol
 - 🖼️ Extract images automatically into `./images/` and reference them with relative paths in both Markdown and HTML
 - 🖼️ **Extract embedded images** from PDFs and save them as `.png` / `.jpg` files
 - 🔤 **Automatic heading detection** based on font size (H1, H2, H3)
+- ✂️ Split Markdown and HTML output into multiple files when a new H1/title page is detected
 - 📊 **Beautiful CLI output** with progress bars and results table (powered by Spectre.Console)
 - ✅ Validates input and provides clear error messages
 
@@ -63,6 +64,9 @@ OPTIONS:
                             Images are extracted automatically for markdown and html output
     -d, --images-dir        Directory to save extracted images
                             Defaults to ./images alongside the output files
+        --split-by-title, --split-html-by-title
+                            Split markdown and html output into multiple files when a page
+                            contains an H1/title-like heading
 ```
 
 ### Examples
@@ -74,8 +78,17 @@ pdf2md document.pdf
 # Convert to HTML
 pdf2md document.pdf --format html
 
+# Convert to Markdown split into multiple files by title pages
+pdf2md document.pdf --format md --split-by-title
+
+# Convert to HTML split into multiple files by title pages
+pdf2md document.pdf --format html --split-by-title
+
 # Convert to both Markdown and HTML
 pdf2md document.pdf --format both
+
+# Split both Markdown and HTML outputs by title pages
+pdf2md document.pdf --format both --split-by-title
 
 # Convert to Markdown with a custom image directory
 pdf2md document.pdf --format md --images-dir output/images
@@ -95,6 +108,9 @@ Given `document.pdf`, the tool produces:
 | `-f md` | `document.md` + `images/page1_img1.png`, etc. |
 | `-f html` | `document.html` + `images/page1_img1.png`, etc. |
 | `-f both` | `document.md` + `document.html` + `images/page1_img1.png`, etc. |
+| `-f md --split-by-title` | `document-part01-title.md`, `document-part02-next-title.md`, etc. |
+| `-f html --split-by-title` | `document-part01-title.html`, `document-part02-next-title.html`, etc. |
+| `-f both --split-by-title` | Split `.md` and `.html` files with shared `images/` output |
 | `-e` | Same outputs as above; retained for compatibility |
 
 Images are extracted to a sibling `images` directory by default and referenced as `./images/...` in both the generated Markdown and HTML outputs.

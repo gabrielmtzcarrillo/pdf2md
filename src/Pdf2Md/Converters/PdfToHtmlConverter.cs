@@ -17,6 +17,27 @@ public sealed class PdfToHtmlConverter
         string? imagesDirectory = null,
         string? imageReferenceRoot = null)
     {
+        return ConvertInternal(pdfPath, imagesDirectory, imageReferenceRoot, splitByTitle: false)[0].Html;
+    }
+
+    /// <summary>
+    /// Converts the PDF into multiple HTML documents, splitting when a page begins
+    /// with an H1/title-like heading.
+    /// </summary>
+    public IReadOnlyList<HtmlDocumentPart> ConvertSplitByTitle(
+        string pdfPath,
+        string? imagesDirectory = null,
+        string? imageReferenceRoot = null)
+    {
+        return ConvertInternal(pdfPath, imagesDirectory, imageReferenceRoot, splitByTitle: true);
+    }
+
+    private static IReadOnlyList<HtmlDocumentPart> ConvertInternal(
+        string pdfPath,
+        string? imagesDirectory,
+        string? imageReferenceRoot,
+        bool splitByTitle)
+    {
         using var document = PdfDocument.Open(pdfPath);
 
         IReadOnlyList<PageImage> allImages = imagesDirectory is not null
@@ -28,6 +49,55 @@ public sealed class PdfToHtmlConverter
             .GroupBy(i => i.PageNumber)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        var defaultTitle = Path.GetFileNameWithoutExtension(pdfPath);
+        if (!splitByTitle)
+        {
+            return new[]
+            {
+                new HtmlDocumentPart(
+                    defaultTitle,
+                    RenderDocument(defaultTitle, pages, imagesByPage, imagesDirectory, imageReferenceRoot))
+            };
+        }
+
+        var parts = new List<HtmlDocumentPart>();
+        var currentPages = new List<PageContent>();
+        var currentTitle = defaultTitle;
+
+        foreach (var page in pages)
+        {
+            var splitTitle = GetSplitTitle(page);
+            if (splitTitle is not null && currentPages.Count > 0)
+            {
+                parts.Add(new HtmlDocumentPart(
+                    currentTitle,
+                    RenderDocument(currentTitle, currentPages, imagesByPage, imagesDirectory, imageReferenceRoot)));
+                currentPages = new List<PageContent>();
+            }
+
+            if (currentPages.Count == 0 && splitTitle is not null)
+                currentTitle = splitTitle;
+
+            currentPages.Add(page);
+        }
+
+        if (currentPages.Count > 0)
+        {
+            parts.Add(new HtmlDocumentPart(
+                currentTitle,
+                RenderDocument(currentTitle, currentPages, imagesByPage, imagesDirectory, imageReferenceRoot)));
+        }
+
+        return parts;
+    }
+
+    private static string RenderDocument(
+        string title,
+        IReadOnlyList<PageContent> pages,
+        IReadOnlyDictionary<int, List<PageImage>> imagesByPage,
+        string? imagesDirectory,
+        string? imageReferenceRoot)
+    {
         var sb = new System.Text.StringBuilder();
 
         sb.AppendLine("<!DOCTYPE html>");
@@ -35,7 +105,7 @@ public sealed class PdfToHtmlConverter
         sb.AppendLine("<head>");
         sb.AppendLine("  <meta charset=\"UTF-8\" />");
         sb.AppendLine("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />");
-        sb.AppendLine($"  <title>{HtmlEncode(Path.GetFileNameWithoutExtension(pdfPath))}</title>");
+        sb.AppendLine($"  <title>{HtmlEncode(title)}</title>");
         sb.AppendLine("  <style>");
         sb.AppendLine("    body { font-family: Georgia, serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #222; }");
         sb.AppendLine("    h1, h2, h3 { color: #111; }");
@@ -63,7 +133,6 @@ public sealed class PdfToHtmlConverter
                     sb.AppendLine($"    <p>{encoded}</p>");
             }
 
-            // Embed images for this page.
             if (imagesByPage.TryGetValue(page.PageNumber, out var pageImages))
             {
                 foreach (var img in pageImages)
@@ -81,6 +150,12 @@ public sealed class PdfToHtmlConverter
         sb.AppendLine("</html>");
 
         return sb.ToString();
+    }
+
+    private static string? GetSplitTitle(PageContent page)
+    {
+        var titleBlock = page.TextBlocks.FirstOrDefault(block => block.IsHeading && block.HeadingLevel == 1);
+        return string.IsNullOrWhiteSpace(titleBlock?.Text) ? null : titleBlock.Text;
     }
 
     private static string HtmlEncode(string text) =>

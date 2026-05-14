@@ -1,6 +1,8 @@
 using Pdf2Md.Converters;
+using Pdf2Md.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using System.Text;
 
 namespace Pdf2Md.Commands;
 
@@ -73,9 +75,23 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
                         var mdImageRoot = imagesDir is not null
                             ? ImageReferencePath.GetReferenceRoot(imagesDir, mdPath)
                             : null;
-                        var md = converter.Convert(inputFullPath, imagesDir, mdImageRoot);
-                        await File.WriteAllTextAsync(mdPath, md, cancellationToken);
-                        outputs.Add(mdPath);
+
+                        var markdownOutputs = settings.SplitByTitle
+                            ? converter.ConvertSplitByTitle(inputFullPath, imagesDir, mdImageRoot)
+                            : new[]
+                            {
+                                new MarkdownDocumentPart(
+                                    Path.GetFileNameWithoutExtension(mdPath),
+                                    converter.Convert(inputFullPath, imagesDir, mdImageRoot))
+                            };
+
+                        for (int i = 0; i < markdownOutputs.Count; i++)
+                        {
+                            var outputPath = GetOutputPath(basePath, markdownOutputs.Count, i, markdownOutputs[i].Title, "md");
+                            await File.WriteAllTextAsync(outputPath, markdownOutputs[i].Markdown, cancellationToken);
+                            outputs.Add(outputPath);
+                        }
+
                         task.Increment(stepSize);
                     }
 
@@ -87,9 +103,23 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
                         var htmlImageRoot = imagesDir is not null
                             ? ImageReferencePath.GetReferenceRoot(imagesDir, htmlPath)
                             : null;
-                        var html = converter.Convert(inputFullPath, imagesDir, htmlImageRoot);
-                        await File.WriteAllTextAsync(htmlPath, html, cancellationToken);
-                        outputs.Add(htmlPath);
+
+                        var htmlOutputs = settings.SplitByTitle
+                            ? converter.ConvertSplitByTitle(inputFullPath, imagesDir, htmlImageRoot)
+                            : new[]
+                            {
+                                new HtmlDocumentPart(
+                                    Path.GetFileNameWithoutExtension(htmlPath),
+                                    converter.Convert(inputFullPath, imagesDir, htmlImageRoot))
+                            };
+
+                        for (int i = 0; i < htmlOutputs.Count; i++)
+                        {
+                            var outputPath = GetOutputPath(basePath, htmlOutputs.Count, i, htmlOutputs[i].Title, "html");
+                            await File.WriteAllTextAsync(outputPath, htmlOutputs[i].Html, cancellationToken);
+                            outputs.Add(outputPath);
+                        }
+
                         task.Increment(stepSize);
                     }
 
@@ -162,5 +192,46 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 
         var outputDirectory = Path.GetDirectoryName(basePath) ?? ".";
         return Path.Combine(outputDirectory, "images");
+    }
+
+    private static string GetOutputPath(
+        string basePath,
+        int partCount,
+        int index,
+        string title,
+        string extension)
+    {
+        if (partCount == 1)
+            return $"{basePath}.{extension}";
+
+        var slug = Slugify(title);
+        var suffix = string.IsNullOrWhiteSpace(slug)
+            ? $"part{index + 1:D2}"
+            : $"part{index + 1:D2}-{slug}";
+
+        return $"{basePath}-{suffix}.{extension}";
+    }
+
+    private static string Slugify(string value)
+    {
+        var builder = new StringBuilder();
+        bool lastWasDash = false;
+
+        foreach (var character in value.ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(character);
+                lastWasDash = false;
+            }
+            else if (builder.Length > 0 && !lastWasDash)
+            {
+                builder.Append('-');
+                lastWasDash = true;
+            }
+        }
+
+        var slug = builder.ToString().Trim('-');
+        return slug.Length <= 40 ? slug : slug[..40].TrimEnd('-');
     }
 }

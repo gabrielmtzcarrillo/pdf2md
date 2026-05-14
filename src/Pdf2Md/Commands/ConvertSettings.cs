@@ -29,6 +29,11 @@ public sealed class ConvertSettings : CommandSettings
     [Description("Directory to save extracted images. Defaults to ./images alongside the output files.")]
     public string? ImagesDir { get; init; }
 
+    [CommandOption("--split-by-title|--split-html-by-title")]
+    [Description("Split markdown and html output into multiple files when a page contains an H1/title-like heading.")]
+    [DefaultValue(false)]
+    public bool SplitByTitle { get; init; }
+
     public override ValidationResult Validate()
     {
         if (string.IsNullOrWhiteSpace(InputPath))

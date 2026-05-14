@@ -17,6 +17,27 @@ public sealed class PdfToMarkdownConverter
         string? imagesDirectory = null,
         string? imageReferenceRoot = null)
     {
+        return ConvertInternal(pdfPath, imagesDirectory, imageReferenceRoot, splitByTitle: false)[0].Markdown;
+    }
+
+    /// <summary>
+    /// Converts the PDF into multiple Markdown documents, splitting when a page contains
+    /// an H1/title-like heading.
+    /// </summary>
+    public IReadOnlyList<MarkdownDocumentPart> ConvertSplitByTitle(
+        string pdfPath,
+        string? imagesDirectory = null,
+        string? imageReferenceRoot = null)
+    {
+        return ConvertInternal(pdfPath, imagesDirectory, imageReferenceRoot, splitByTitle: true);
+    }
+
+    private static IReadOnlyList<MarkdownDocumentPart> ConvertInternal(
+        string pdfPath,
+        string? imagesDirectory,
+        string? imageReferenceRoot,
+        bool splitByTitle)
+    {
         using var document = PdfDocument.Open(pdfPath);
 
         // Extract images (if requested) before parsing text so we can reference them.
@@ -29,6 +50,54 @@ public sealed class PdfToMarkdownConverter
             .GroupBy(i => i.PageNumber)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        var defaultTitle = Path.GetFileNameWithoutExtension(pdfPath);
+        if (!splitByTitle)
+        {
+            return new[]
+            {
+                new MarkdownDocumentPart(
+                    defaultTitle,
+                    RenderDocument(pages, imagesByPage, imagesDirectory, imageReferenceRoot))
+            };
+        }
+
+        var parts = new List<MarkdownDocumentPart>();
+        var currentPages = new List<PageContent>();
+        var currentTitle = defaultTitle;
+
+        foreach (var page in pages)
+        {
+            var splitTitle = GetSplitTitle(page);
+            if (splitTitle is not null && currentPages.Count > 0)
+            {
+                parts.Add(new MarkdownDocumentPart(
+                    currentTitle,
+                    RenderDocument(currentPages, imagesByPage, imagesDirectory, imageReferenceRoot)));
+                currentPages = new List<PageContent>();
+            }
+
+            if (currentPages.Count == 0 && splitTitle is not null)
+                currentTitle = splitTitle;
+
+            currentPages.Add(page);
+        }
+
+        if (currentPages.Count > 0)
+        {
+            parts.Add(new MarkdownDocumentPart(
+                currentTitle,
+                RenderDocument(currentPages, imagesByPage, imagesDirectory, imageReferenceRoot)));
+        }
+
+        return parts;
+    }
+
+    private static string RenderDocument(
+        IReadOnlyList<PageContent> pages,
+        IReadOnlyDictionary<int, List<PageImage>> imagesByPage,
+        string? imagesDirectory,
+        string? imageReferenceRoot)
+    {
         var sb = new System.Text.StringBuilder();
 
         for (int i = 0; i < pages.Count; i++)
@@ -56,7 +125,6 @@ public sealed class PdfToMarkdownConverter
                 sb.AppendLine();
             }
 
-            // Append image references for this page.
             if (imagesByPage.TryGetValue(page.PageNumber, out var pageImages))
             {
                 foreach (var img in pageImages)
@@ -70,5 +138,11 @@ public sealed class PdfToMarkdownConverter
         }
 
         return sb.ToString();
+    }
+
+    private static string? GetSplitTitle(PageContent page)
+    {
+        var titleBlock = page.TextBlocks.FirstOrDefault(block => block.IsHeading && block.HeadingLevel == 1);
+        return string.IsNullOrWhiteSpace(titleBlock?.Text) ? null : titleBlock.Text;
     }
 }

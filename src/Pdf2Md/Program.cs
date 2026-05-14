@@ -10,8 +10,11 @@ app.Configure(config =>
 
     config.AddExample(new[] { "document.pdf" });
     config.AddExample(new[] { "document.pdf", "--format", "md" });
+    config.AddExample(new[] { "document.pdf", "--format", "md", "--split-by-title" });
     config.AddExample(new[] { "document.pdf", "--format", "html" });
+    config.AddExample(new[] { "document.pdf", "--format", "html", "--split-html-by-title" });
     config.AddExample(new[] { "document.pdf", "--format", "both" });
+    config.AddExample(new[] { "document.pdf", "--format", "both", "--split-by-title" });
     config.AddExample(new[] { "document.pdf", "-o", "output/result", "-f", "md", "-d", "output/images" });
 });
 
