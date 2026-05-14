@@ -10,8 +10,8 @@ app.Configure(config =>
 
     config.AddExample(new[] { "document.pdf" });
     config.AddExample(new[] { "document.pdf", "--format", "html" });
-    config.AddExample(new[] { "document.pdf", "--format", "both", "--extract-images" });
-    config.AddExample(new[] { "document.pdf", "-o", "output/result", "-f", "both", "-e" });
+    config.AddExample(new[] { "document.pdf", "--format", "both" });
+    config.AddExample(new[] { "document.pdf", "-o", "output/result", "-f", "html", "-d", "output/images" });
 });
 
 return app.Run(args);

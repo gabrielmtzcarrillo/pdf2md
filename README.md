@@ -1,12 +1,13 @@
 # pdf2md
 
-A **C# 10** command-line tool built with [Spectre.Console](https://spectreconsole.net/) that converts PDF files to **Markdown** (`.md`) and/or **HTML** (`.html`), with optional **image extraction**.
+A **C# 10** command-line tool built with [Spectre.Console](https://spectreconsole.net/) that converts PDF files to **Markdown** (`.md`) and/or **HTML** (`.html`), with image extraction for HTML output.
 
 ---
 
 ## Features
 
 - 📄 Convert any PDF to **Markdown** or **HTML** (or both at once)
+- 🖼️ Extract images automatically for HTML output into `./images/` and reference them with relative paths
 - 🖼️ **Extract embedded images** from PDFs and save them as `.png` / `.jpg` files
 - 🔤 **Automatic heading detection** based on font size (H1, H2, H3)
 - 📊 **Beautiful CLI output** with progress bars and results table (powered by Spectre.Console)
@@ -59,8 +60,10 @@ OPTIONS:
                             Defaults to the input file name in the same directory
     -f, --format            Output format: md, html, or both  [default: md]
     -e, --extract-images    Extract images from the PDF
+                            HTML output extracts images automatically
     -d, --images-dir        Directory to save extracted images
-                            Defaults to <output>_images
+                            Defaults to ./images for html/both,
+                            otherwise <output>_images
 ```
 
 ### Examples
@@ -75,11 +78,11 @@ pdf2md document.pdf --format html
 # Convert to both Markdown and HTML
 pdf2md document.pdf --format both
 
-# Convert and extract images
-pdf2md document.pdf --format both --extract-images
+# Convert to HTML and extract images into ./images automatically
+pdf2md document.pdf --format html
 
 # Specify output path and custom image directory
-pdf2md document.pdf -o output/result -f both -e -d output/images
+pdf2md document.pdf -o output/result -f html -d output/images
 ```
 
 ---
@@ -91,11 +94,11 @@ Given `document.pdf`, the tool produces:
 | Flag | Output |
 |------|--------|
 | `-f md` | `document.md` |
-| `-f html` | `document.html` |
-| `-f both` | `document.md` + `document.html` |
+| `-f html` | `document.html` + `images/page1_img1.png`, etc. |
+| `-f both` | `document.md` + `document.html` + `images/page1_img1.png`, etc. |
 | `-e` | `document_images/page1_img1.png`, etc. |
 
-Images are referenced as relative paths in both the `.md` and `.html` outputs, so opening the `.html` file in a browser will display the extracted images correctly.
+HTML images are extracted to a sibling `images` directory by default and referenced as `./images/...` in the generated markup. Markdown keeps the opt-in `--extract-images` behavior unless HTML output is also being generated.
 
 ---
 
@@ -126,6 +129,8 @@ src/
 
 | Package | Version | License |
 |---------|---------|---------|
+| [FileSignatures](https://www.nuget.org/packages/FileSignatures) | 7.2.0 | MIT |
+| [Magick.NET-Q8-AnyCPU](https://www.nuget.org/packages/Magick.NET-Q8-AnyCPU) | 14.13.0 | Apache 2.0 |
 | [PdfPig](https://uglytoad.github.io/PdfPig/) | 0.1.14 | Apache 2.0 |
 | [Spectre.Console.Cli](https://spectreconsole.net/) | 0.55.0 | MIT |
 

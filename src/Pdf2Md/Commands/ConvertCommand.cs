@@ -27,13 +27,11 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
             ? Path.GetFullPath(settings.OutputPath)
             : Path.Combine(inputDir, inputName);
 
-        var imagesDir = settings.ExtractImages
-            ? settings.ImagesDir is not null
-                ? Path.GetFullPath(settings.ImagesDir)
-                : $"{basePath}_images"
-            : null;
-
         var format = settings.Format.ToLowerInvariant();
+        var shouldExtractImages = settings.ExtractImages || format is "html" or "both";
+        var imagesDir = shouldExtractImages
+            ? ResolveImagesDirectory(settings, format, basePath)
+            : null;
 
         // ── render welcome header ──────────────────────────────────────────
         AnsiConsole.Write(
@@ -63,7 +61,7 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
                 new SpinnerColumn())
             .StartAsync(async ctx =>
             {
-                var totalSteps = (format is "both" ? 2 : 1) + (imagesDir is not null ? 1 : 0);
+                var totalSteps = format is "both" ? 2 : 1;
                 double stepSize = 100.0 / totalSteps;
 
                 var task = ctx.AddTask("[green]Converting PDF[/]", maxValue: 100);
@@ -74,8 +72,11 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
                     {
                         task.Description = "[green]Converting to Markdown[/]";
                         var converter = new PdfToMarkdownConverter();
-                        var md = converter.Convert(inputFullPath, imagesDir);
                         var mdPath = $"{basePath}.md";
+                        var mdImageRoot = imagesDir is not null
+                            ? ImageReferencePath.GetReferenceRoot(imagesDir, mdPath)
+                            : null;
+                        var md = converter.Convert(inputFullPath, imagesDir, mdImageRoot);
                         await File.WriteAllTextAsync(mdPath, md, cancellationToken);
                         outputs.Add(mdPath);
                         task.Increment(stepSize);
@@ -85,8 +86,11 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
                     {
                         task.Description = "[green]Converting to HTML[/]";
                         var converter = new PdfToHtmlConverter();
-                        var html = converter.Convert(inputFullPath, imagesDir);
                         var htmlPath = $"{basePath}.html";
+                        var htmlImageRoot = imagesDir is not null
+                            ? ImageReferencePath.GetReferenceRoot(imagesDir, htmlPath)
+                            : null;
+                        var html = converter.Convert(inputFullPath, imagesDir, htmlImageRoot);
                         await File.WriteAllTextAsync(htmlPath, html, cancellationToken);
                         outputs.Add(htmlPath);
                         task.Increment(stepSize);
@@ -150,5 +154,19 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
             < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
             _ => $"{bytes / (1024.0 * 1024):F1} MB"
         };
+    }
+
+    private static string ResolveImagesDirectory(
+        ConvertSettings settings,
+        string format,
+        string basePath)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.ImagesDir))
+            return Path.GetFullPath(settings.ImagesDir);
+
+        var outputDirectory = Path.GetDirectoryName(basePath) ?? ".";
+        return format is "html" or "both"
+            ? Path.Combine(outputDirectory, "images")
+            : $"{basePath}_images";
     }
 }

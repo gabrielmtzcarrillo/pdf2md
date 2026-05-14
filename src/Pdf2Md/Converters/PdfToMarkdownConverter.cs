@@ -12,7 +12,10 @@ public sealed class PdfToMarkdownConverter
     /// If <paramref name="imagesDirectory"/> is provided, images are saved there and
     /// referenced as relative paths in the output.
     /// </summary>
-    public string Convert(string pdfPath, string? imagesDirectory = null)
+    public string Convert(
+        string pdfPath,
+        string? imagesDirectory = null,
+        string? imageReferenceRoot = null)
     {
         using var document = PdfDocument.Open(pdfPath);
 
@@ -58,14 +61,8 @@ public sealed class PdfToMarkdownConverter
             {
                 foreach (var img in pageImages)
                 {
-                    var relPath = imagesDirectory is not null
-                        ? Path.Combine(
-                            Path.GetFileName(imagesDirectory),
-                            $"page{img.PageNumber}_img{img.ImageIndex}.{img.Extension}")
-                        : $"page{img.PageNumber}_img{img.ImageIndex}.{img.Extension}";
-
-                    // Use forward slashes for cross-platform Markdown compatibility.
-                    relPath = relPath.Replace('\\', '/');
+                    var fileName = $"page{img.PageNumber}_img{img.ImageIndex}.{img.Extension}";
+                    var relPath = ImageReferencePath.GetImagePath(fileName, imagesDirectory, imageReferenceRoot);
                     sb.AppendLine($"![Image from page {img.PageNumber}]({relPath})");
                     sb.AppendLine();
                 }

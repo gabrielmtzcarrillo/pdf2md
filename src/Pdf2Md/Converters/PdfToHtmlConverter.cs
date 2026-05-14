@@ -12,7 +12,10 @@ public sealed class PdfToHtmlConverter
     /// If <paramref name="imagesDirectory"/> is provided, images are saved there and
     /// referenced as relative &lt;img&gt; tags in the output.
     /// </summary>
-    public string Convert(string pdfPath, string? imagesDirectory = null)
+    public string Convert(
+        string pdfPath,
+        string? imagesDirectory = null,
+        string? imageReferenceRoot = null)
     {
         using var document = PdfDocument.Open(pdfPath);
 
@@ -65,13 +68,8 @@ public sealed class PdfToHtmlConverter
             {
                 foreach (var img in pageImages)
                 {
-                    var relPath = imagesDirectory is not null
-                        ? Path.Combine(
-                            Path.GetFileName(imagesDirectory),
-                            $"page{img.PageNumber}_img{img.ImageIndex}.{img.Extension}")
-                        : $"page{img.PageNumber}_img{img.ImageIndex}.{img.Extension}";
-
-                    relPath = relPath.Replace('\\', '/');
+                    var fileName = $"page{img.PageNumber}_img{img.ImageIndex}.{img.Extension}";
+                    var relPath = ImageReferencePath.GetImagePath(fileName, imagesDirectory, imageReferenceRoot);
                     sb.AppendLine($"    <img src=\"{relPath}\" alt=\"Image from page {img.PageNumber}\" />");
                 }
             }

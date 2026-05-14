@@ -1,3 +1,7 @@
+using FileSignatures;
+using FileSignatures.Formats;
+using ImageMagick;
+using Pdf2Md.Formats;
 using Pdf2Md.Models;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
@@ -7,6 +11,9 @@ namespace Pdf2Md.Extractors;
 /// <summary>Extracts images from PDF pages and saves them to disk.</summary>
 public static class ImageExtractor
 {
+    private static readonly FileFormatInspector ImageFormatInspector =
+        new(FileFormatLocator.GetFormats().OfType<Image>().Concat(new[] { new Jpeg2000Format() }));
+
     /// <summary>
     /// Extracts all images from the given PDF document and saves them to
     /// <paramref name="outputDirectory"/>. Returns a list of <see cref="PageImage"/>
@@ -40,7 +47,13 @@ public static class ImageExtractor
                     {
                         // Fall back to whatever raw format the image is stored in.
                         bytes = pdfImage.RawBytes.ToArray();
-                        extension = DetectExtension(bytes);
+                        extension = DetermineExtension(bytes);
+
+                        if (extension == "jp2")
+                        {
+                            bytes = ConvertJpeg2000ToPng(bytes);
+                            extension = "png";
+                        }
                     }
 
                     var fileName = $"page{page.Number}_img{imageIndex + 1}.{extension}";
@@ -77,25 +90,16 @@ public static class ImageExtractor
 
     // ── helpers ────────────────────────────────────────────────────────────
 
-    private static string DetectExtension(byte[] bytes)
+    private static string DetermineExtension(byte[] bytes)
     {
-        if (bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8)
-            return "jpg";
+        using var stream = new MemoryStream(bytes, writable: false);
+        var format = ImageFormatInspector.DetermineFileFormat(stream);
+        return format?.Extension.TrimStart('.') ?? "bin";
+    }
 
-        if (bytes.Length >= 8
-            && bytes[0] == 0x89 && bytes[1] == 0x50
-            && bytes[2] == 0x4E && bytes[3] == 0x47)
-            return "png";
-
-        if (bytes.Length >= 4
-            && bytes[0] == 0x47 && bytes[1] == 0x49
-            && bytes[2] == 0x46)
-            return "gif";
-
-        if (bytes.Length >= 4
-            && bytes[0] == 0x42 && bytes[1] == 0x4D)
-            return "bmp";
-
-        return "bin";
+    private static byte[] ConvertJpeg2000ToPng(byte[] bytes)
+    {
+        using var image = new MagickImage(bytes, MagickFormat.Jp2);
+        return image.ToByteArray(MagickFormat.Png);
     }
 }
