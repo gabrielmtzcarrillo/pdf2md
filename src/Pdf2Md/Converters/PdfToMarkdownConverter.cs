@@ -12,7 +12,7 @@ public sealed class PdfToMarkdownConverter
     /// If <paramref name="imagesDirectory"/> is provided, images are saved there and
     /// referenced as relative paths in the output.
     /// </summary>
-    public Task<string> ConvertAsync(string pdfPath, string? imagesDirectory = null)
+    public string Convert(string pdfPath, string? imagesDirectory = null)
     {
         using var document = PdfDocument.Open(pdfPath);
 
@@ -72,6 +72,6 @@ public sealed class PdfToMarkdownConverter
             }
         }
 
-        return Task.FromResult(sb.ToString());
+        return sb.ToString();
     }
 }

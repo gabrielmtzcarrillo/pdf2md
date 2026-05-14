@@ -74,9 +74,9 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
                     {
                         task.Description = "[green]Converting to Markdown[/]";
                         var converter = new PdfToMarkdownConverter();
-                        var md = await converter.ConvertAsync(inputFullPath, imagesDir);
+                        var md = converter.Convert(inputFullPath, imagesDir);
                         var mdPath = $"{basePath}.md";
-                        await File.WriteAllTextAsync(mdPath, md);
+                        await File.WriteAllTextAsync(mdPath, md, cancellationToken);
                         outputs.Add(mdPath);
                         task.Increment(stepSize);
                     }
@@ -85,9 +85,9 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
                     {
                         task.Description = "[green]Converting to HTML[/]";
                         var converter = new PdfToHtmlConverter();
-                        var html = await converter.ConvertAsync(inputFullPath, imagesDir);
+                        var html = converter.Convert(inputFullPath, imagesDir);
                         var htmlPath = $"{basePath}.html";
-                        await File.WriteAllTextAsync(htmlPath, html);
+                        await File.WriteAllTextAsync(htmlPath, html, cancellationToken);
                         outputs.Add(htmlPath);
                         task.Increment(stepSize);
                     }

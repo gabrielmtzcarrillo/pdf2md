@@ -12,7 +12,7 @@ public sealed class PdfToHtmlConverter
     /// If <paramref name="imagesDirectory"/> is provided, images are saved there and
     /// referenced as relative &lt;img&gt; tags in the output.
     /// </summary>
-    public Task<string> ConvertAsync(string pdfPath, string? imagesDirectory = null)
+    public string Convert(string pdfPath, string? imagesDirectory = null)
     {
         using var document = PdfDocument.Open(pdfPath);
 
@@ -82,13 +82,9 @@ public sealed class PdfToHtmlConverter
         sb.AppendLine("</body>");
         sb.AppendLine("</html>");
 
-        return Task.FromResult(sb.ToString());
+        return sb.ToString();
     }
 
     private static string HtmlEncode(string text) =>
-        text
-            .Replace("&", "&amp;")
-            .Replace("<", "&lt;")
-            .Replace(">", "&gt;")
-            .Replace("\"", "&quot;");
+        System.Net.WebUtility.HtmlEncode(text);
 }
