@@ -21,12 +21,12 @@ public sealed class ConvertSettings : CommandSettings
     public string Format { get; init; } = "md";
 
     [CommandOption("-e|--extract-images")]
-    [Description("Extract images from the PDF and save them alongside the output. HTML output extracts images automatically.")]
+    [Description("Extract images from the PDF and save them alongside the output. Images are extracted automatically for markdown and html output.")]
     [DefaultValue(false)]
     public bool ExtractImages { get; init; }
 
     [CommandOption("-d|--images-dir")]
-    [Description("Directory to save extracted images. Defaults to ./images for html/both, otherwise <output>_images.")]
+    [Description("Directory to save extracted images. Defaults to ./images alongside the output files.")]
     public string? ImagesDir { get; init; }
 
     public override ValidationResult Validate()

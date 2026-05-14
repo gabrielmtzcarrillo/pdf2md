@@ -9,9 +9,10 @@ app.Configure(config =>
     config.SetApplicationVersion("1.0.0");
 
     config.AddExample(new[] { "document.pdf" });
+    config.AddExample(new[] { "document.pdf", "--format", "md" });
     config.AddExample(new[] { "document.pdf", "--format", "html" });
     config.AddExample(new[] { "document.pdf", "--format", "both" });
-    config.AddExample(new[] { "document.pdf", "-o", "output/result", "-f", "html", "-d", "output/images" });
+    config.AddExample(new[] { "document.pdf", "-o", "output/result", "-f", "md", "-d", "output/images" });
 });
 
 return app.Run(args);

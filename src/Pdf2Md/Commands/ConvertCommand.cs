@@ -28,10 +28,7 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
             : Path.Combine(inputDir, inputName);
 
         var format = settings.Format.ToLowerInvariant();
-        var shouldExtractImages = settings.ExtractImages || format is "html" or "both";
-        var imagesDir = shouldExtractImages
-            ? ResolveImagesDirectory(settings, format, basePath)
-            : null;
+        var imagesDir = ResolveImagesDirectory(settings, basePath);
 
         // ── render welcome header ──────────────────────────────────────────
         AnsiConsole.Write(
@@ -158,15 +155,12 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 
     private static string ResolveImagesDirectory(
         ConvertSettings settings,
-        string format,
         string basePath)
     {
         if (!string.IsNullOrWhiteSpace(settings.ImagesDir))
             return Path.GetFullPath(settings.ImagesDir);
 
         var outputDirectory = Path.GetDirectoryName(basePath) ?? ".";
-        return format is "html" or "both"
-            ? Path.Combine(outputDirectory, "images")
-            : $"{basePath}_images";
+        return Path.Combine(outputDirectory, "images");
     }
 }

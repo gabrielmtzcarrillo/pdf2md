@@ -107,7 +107,7 @@ internal static class PdfPageParser
 
         foreach (var (lineWords, lineBottom, lineTop) in lines)
         {
-            var lineText = string.Join(" ", lineWords.Select(w => w.Text)).Trim();
+            var lineText = NormalizeWhitespace(string.Join(" ", lineWords.Select(w => w.Text)));
             if (string.IsNullOrEmpty(lineText)) continue;
 
             double lineHeight = lineTop - lineBottom;
@@ -157,7 +157,7 @@ internal static class PdfPageParser
         double fontSize,
         double bodyFontSize)
     {
-        var text = string.Join(" ", lines).Trim();
+        var text = NormalizeWhitespace(string.Join(" ", lines));
         double ratio = bodyFontSize > 0 ? fontSize / bodyFontSize : 1.0;
 
         bool isHeading = ratio >= 1.15;
@@ -168,5 +168,15 @@ internal static class PdfPageParser
             : 0;
 
         return new TextBlock(text, fontSize, isHeading, level);
+    }
+
+    private static string NormalizeWhitespace(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+
+        return string.Join(
+            " ",
+            text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
     }
 }

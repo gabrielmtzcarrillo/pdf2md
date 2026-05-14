@@ -1,13 +1,13 @@
 # pdf2md
 
-A **C# 10** command-line tool built with [Spectre.Console](https://spectreconsole.net/) that converts PDF files to **Markdown** (`.md`) and/or **HTML** (`.html`), with image extraction for HTML output.
+A **C# 10** command-line tool built with [Spectre.Console](https://spectreconsole.net/) that converts PDF files to **Markdown** (`.md`) and/or **HTML** (`.html`), with automatic image extraction and linking in both outputs.
 
 ---
 
 ## Features
 
 - 📄 Convert any PDF to **Markdown** or **HTML** (or both at once)
-- 🖼️ Extract images automatically for HTML output into `./images/` and reference them with relative paths
+- 🖼️ Extract images automatically into `./images/` and reference them with relative paths in both Markdown and HTML
 - 🖼️ **Extract embedded images** from PDFs and save them as `.png` / `.jpg` files
 - 🔤 **Automatic heading detection** based on font size (H1, H2, H3)
 - 📊 **Beautiful CLI output** with progress bars and results table (powered by Spectre.Console)
@@ -60,16 +60,15 @@ OPTIONS:
                             Defaults to the input file name in the same directory
     -f, --format            Output format: md, html, or both  [default: md]
     -e, --extract-images    Extract images from the PDF
-                            HTML output extracts images automatically
+                            Images are extracted automatically for markdown and html output
     -d, --images-dir        Directory to save extracted images
-                            Defaults to ./images for html/both,
-                            otherwise <output>_images
+                            Defaults to ./images alongside the output files
 ```
 
 ### Examples
 
 ```bash
-# Convert to Markdown (default)
+# Convert to Markdown (default) and extract images into ./images
 pdf2md document.pdf
 
 # Convert to HTML
@@ -78,11 +77,11 @@ pdf2md document.pdf --format html
 # Convert to both Markdown and HTML
 pdf2md document.pdf --format both
 
-# Convert to HTML and extract images into ./images automatically
-pdf2md document.pdf --format html
+# Convert to Markdown with a custom image directory
+pdf2md document.pdf --format md --images-dir output/images
 
 # Specify output path and custom image directory
-pdf2md document.pdf -o output/result -f html -d output/images
+pdf2md document.pdf -o output/result -f both -d output/images
 ```
 
 ---
@@ -93,12 +92,12 @@ Given `document.pdf`, the tool produces:
 
 | Flag | Output |
 |------|--------|
-| `-f md` | `document.md` |
+| `-f md` | `document.md` + `images/page1_img1.png`, etc. |
 | `-f html` | `document.html` + `images/page1_img1.png`, etc. |
 | `-f both` | `document.md` + `document.html` + `images/page1_img1.png`, etc. |
-| `-e` | `document_images/page1_img1.png`, etc. |
+| `-e` | Same outputs as above; retained for compatibility |
 
-HTML images are extracted to a sibling `images` directory by default and referenced as `./images/...` in the generated markup. Markdown keeps the opt-in `--extract-images` behavior unless HTML output is also being generated.
+Images are extracted to a sibling `images` directory by default and referenced as `./images/...` in both the generated Markdown and HTML outputs.
 
 ---
 
