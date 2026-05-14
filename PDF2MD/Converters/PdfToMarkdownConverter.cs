@@ -1,6 +1,4 @@
-using Pdf2Md.Extractors;
 using Pdf2Md.Models;
-using UglyToad.PdfPig;
 
 namespace Pdf2Md.Converters;
 
@@ -17,7 +15,11 @@ public sealed class PdfToMarkdownConverter
         string? imagesDirectory = null,
         string? imageReferenceRoot = null)
     {
-        return ConvertInternal(pdfPath, imagesDirectory, imageReferenceRoot, splitByTitle: false)[0].Markdown;
+        return ConvertDetailed(
+            PdfDocumentLoader.Load(pdfPath, imagesDirectory),
+            imagesDirectory,
+            imageReferenceRoot,
+            splitByTitle: false).Parts[0].Markdown;
     }
 
     /// <summary>
@@ -29,72 +31,34 @@ public sealed class PdfToMarkdownConverter
         string? imagesDirectory = null,
         string? imageReferenceRoot = null)
     {
-        return ConvertInternal(pdfPath, imagesDirectory, imageReferenceRoot, splitByTitle: true);
+        return ConvertDetailed(
+            PdfDocumentLoader.Load(pdfPath, imagesDirectory),
+            imagesDirectory,
+            imageReferenceRoot,
+            splitByTitle: true).Parts;
     }
 
-    private static IReadOnlyList<MarkdownDocumentPart> ConvertInternal(
-        string pdfPath,
+    internal ConversionResult<MarkdownDocumentPart> ConvertDetailed(
+        LoadedPdfDocument document,
         string? imagesDirectory,
         string? imageReferenceRoot,
         bool splitByTitle)
     {
-        using var document = PdfDocument.Open(pdfPath);
+        var parts = DocumentPartSplitter.CreateParts(
+            document.DefaultTitle,
+            document.Pages,
+            splitByTitle,
+            DocumentPartSplitter.GetSplitTitle,
+            (title, pages) => new MarkdownDocumentPart(
+                title,
+                RenderDocument(pages, document.ImagesByPage, imagesDirectory, imageReferenceRoot)));
 
-        // Extract images (if requested) before parsing text so we can reference them.
-        IReadOnlyList<PageImage> allImages = imagesDirectory is not null
-            ? ImageExtractor.ExtractImages(document, imagesDirectory)
-            : Array.Empty<PageImage>();
-
-        var pages = PdfPageParser.Parse(document);
-        var imagesByPage = allImages
-            .GroupBy(i => i.PageNumber)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        var defaultTitle = Path.GetFileNameWithoutExtension(pdfPath);
-        if (!splitByTitle)
-        {
-            return new[]
-            {
-                new MarkdownDocumentPart(
-                    defaultTitle,
-                    RenderDocument(pages, imagesByPage, imagesDirectory, imageReferenceRoot))
-            };
-        }
-
-        var parts = new List<MarkdownDocumentPart>();
-        var currentPages = new List<PageContent>();
-        var currentTitle = defaultTitle;
-
-        foreach (var page in pages)
-        {
-            var splitTitle = GetSplitTitle(page);
-            if (splitTitle is not null && currentPages.Count > 0)
-            {
-                parts.Add(new MarkdownDocumentPart(
-                    currentTitle,
-                    RenderDocument(currentPages, imagesByPage, imagesDirectory, imageReferenceRoot)));
-                currentPages = new List<PageContent>();
-            }
-
-            if (currentPages.Count == 0 && splitTitle is not null)
-                currentTitle = splitTitle;
-
-            currentPages.Add(page);
-        }
-
-        if (currentPages.Count > 0)
-        {
-            parts.Add(new MarkdownDocumentPart(
-                currentTitle,
-                RenderDocument(currentPages, imagesByPage, imagesDirectory, imageReferenceRoot)));
-        }
-
-        return parts;
+        return new ConversionResult<MarkdownDocumentPart>(parts, document.Warnings);
     }
 
     private static string RenderDocument(
         IReadOnlyList<PageContent> pages,
-        IReadOnlyDictionary<int, List<PageImage>> imagesByPage,
+        IReadOnlyDictionary<int, IReadOnlyList<PageImage>> imagesByPage,
         string? imagesDirectory,
         string? imageReferenceRoot)
     {
@@ -138,11 +102,5 @@ public sealed class PdfToMarkdownConverter
         }
 
         return sb.ToString();
-    }
-
-    private static string? GetSplitTitle(PageContent page)
-    {
-        var titleBlock = page.TextBlocks.FirstOrDefault(block => block.IsHeading && block.HeadingLevel == 1);
-        return string.IsNullOrWhiteSpace(titleBlock?.Text) ? null : titleBlock.Text;
     }
 }

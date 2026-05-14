@@ -1,12 +1,15 @@
+using Pdf2Md;
 using Pdf2Md.Commands;
 using Spectre.Console.Cli;
+using System.Reflection;
 
 var app = new CommandApp<ConvertCommand>();
+var assembly = Assembly.GetExecutingAssembly();
 
 app.Configure(config =>
 {
     config.SetApplicationName("pdf2md");
-    config.SetApplicationVersion("1.0.0");
+    config.SetApplicationVersion(ApplicationVersion.GetDisplayVersion(assembly));
 
     config.AddExample(new[] { "document.pdf" });
     config.AddExample(new[] { "document.pdf", "--format", "md" });

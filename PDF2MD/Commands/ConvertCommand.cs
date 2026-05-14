@@ -47,6 +47,7 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 
         // ── run conversion with progress ───────────────────────────────────
         var outputs = new List<string>();
+        IReadOnlyList<ImageExtractionWarning> warnings = Array.Empty<ImageExtractionWarning>();
         int errorCode = 0;
 
         await AnsiConsole.Progress()
@@ -67,6 +68,10 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
 
                 try
                 {
+                    task.Description = "[green]Reading PDF[/]";
+                    var loadedDocument = PdfDocumentLoader.Load(inputFullPath, imagesDir);
+                    warnings = loadedDocument.Warnings;
+
                     if (format is "md" or "both")
                     {
                         task.Description = "[green]Converting to Markdown[/]";
@@ -76,14 +81,11 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
                             ? ImageReferencePath.GetReferenceRoot(imagesDir, mdPath)
                             : null;
 
-                        var markdownOutputs = settings.SplitByTitle
-                            ? converter.ConvertSplitByTitle(inputFullPath, imagesDir, mdImageRoot)
-                            : new[]
-                            {
-                                new MarkdownDocumentPart(
-                                    Path.GetFileNameWithoutExtension(mdPath),
-                                    converter.Convert(inputFullPath, imagesDir, mdImageRoot))
-                            };
+                        var markdownOutputs = converter.ConvertDetailed(
+                            loadedDocument,
+                            imagesDir,
+                            mdImageRoot,
+                            settings.SplitByTitle).Parts;
 
                         for (int i = 0; i < markdownOutputs.Count; i++)
                         {
@@ -104,14 +106,11 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
                             ? ImageReferencePath.GetReferenceRoot(imagesDir, htmlPath)
                             : null;
 
-                        var htmlOutputs = settings.SplitByTitle
-                            ? converter.ConvertSplitByTitle(inputFullPath, imagesDir, htmlImageRoot)
-                            : new[]
-                            {
-                                new HtmlDocumentPart(
-                                    Path.GetFileNameWithoutExtension(htmlPath),
-                                    converter.Convert(inputFullPath, imagesDir, htmlImageRoot))
-                            };
+                        var htmlOutputs = converter.ConvertDetailed(
+                            loadedDocument,
+                            imagesDir,
+                            htmlImageRoot,
+                            settings.SplitByTitle).Parts;
 
                         for (int i = 0; i < htmlOutputs.Count; i++)
                         {
@@ -168,6 +167,16 @@ public sealed class ConvertCommand : AsyncCommand<ConvertSettings>
         }
 
         AnsiConsole.Write(table);
+
+        if (warnings.Count > 0)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.Write(new Rule("[yellow]Warnings[/]").LeftJustified());
+
+            foreach (var warning in warnings)
+                AnsiConsole.MarkupLine($"[yellow]-[/] {Markup.Escape(warning.ToDisplayMessage())}");
+        }
+
         AnsiConsole.MarkupLine("\n[bold green]✔ Conversion complete![/]");
 
         return 0;

@@ -1,3 +1,5 @@
 <Solution>
+  <Folder Name="/PDF2MD/" />
+  <Project Path="PDF2MD.Tests/PDF2MD.Tests.csproj" />
   <Project Path="PDF2MD/Pdf2Md.csproj" />
 </Solution>

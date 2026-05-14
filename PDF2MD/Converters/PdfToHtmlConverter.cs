@@ -1,6 +1,4 @@
-using Pdf2Md.Extractors;
 using Pdf2Md.Models;
-using UglyToad.PdfPig;
 
 namespace Pdf2Md.Converters;
 
@@ -17,7 +15,11 @@ public sealed class PdfToHtmlConverter
         string? imagesDirectory = null,
         string? imageReferenceRoot = null)
     {
-        return ConvertInternal(pdfPath, imagesDirectory, imageReferenceRoot, splitByTitle: false)[0].Html;
+        return ConvertDetailed(
+            PdfDocumentLoader.Load(pdfPath, imagesDirectory),
+            imagesDirectory,
+            imageReferenceRoot,
+            splitByTitle: false).Parts[0].Html;
     }
 
     /// <summary>
@@ -29,72 +31,35 @@ public sealed class PdfToHtmlConverter
         string? imagesDirectory = null,
         string? imageReferenceRoot = null)
     {
-        return ConvertInternal(pdfPath, imagesDirectory, imageReferenceRoot, splitByTitle: true);
+        return ConvertDetailed(
+            PdfDocumentLoader.Load(pdfPath, imagesDirectory),
+            imageReferenceRoot: imageReferenceRoot,
+            imagesDirectory: imagesDirectory,
+            splitByTitle: true).Parts;
     }
 
-    private static IReadOnlyList<HtmlDocumentPart> ConvertInternal(
-        string pdfPath,
+    internal ConversionResult<HtmlDocumentPart> ConvertDetailed(
+        LoadedPdfDocument document,
         string? imagesDirectory,
         string? imageReferenceRoot,
         bool splitByTitle)
     {
-        using var document = PdfDocument.Open(pdfPath);
+        var parts = DocumentPartSplitter.CreateParts(
+            document.DefaultTitle,
+            document.Pages,
+            splitByTitle,
+            DocumentPartSplitter.GetSplitTitle,
+            (title, pages) => new HtmlDocumentPart(
+                title,
+                RenderDocument(title, pages, document.ImagesByPage, imagesDirectory, imageReferenceRoot)));
 
-        IReadOnlyList<PageImage> allImages = imagesDirectory is not null
-            ? ImageExtractor.ExtractImages(document, imagesDirectory)
-            : Array.Empty<PageImage>();
-
-        var pages = PdfPageParser.Parse(document);
-        var imagesByPage = allImages
-            .GroupBy(i => i.PageNumber)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        var defaultTitle = Path.GetFileNameWithoutExtension(pdfPath);
-        if (!splitByTitle)
-        {
-            return new[]
-            {
-                new HtmlDocumentPart(
-                    defaultTitle,
-                    RenderDocument(defaultTitle, pages, imagesByPage, imagesDirectory, imageReferenceRoot))
-            };
-        }
-
-        var parts = new List<HtmlDocumentPart>();
-        var currentPages = new List<PageContent>();
-        var currentTitle = defaultTitle;
-
-        foreach (var page in pages)
-        {
-            var splitTitle = GetSplitTitle(page);
-            if (splitTitle is not null && currentPages.Count > 0)
-            {
-                parts.Add(new HtmlDocumentPart(
-                    currentTitle,
-                    RenderDocument(currentTitle, currentPages, imagesByPage, imagesDirectory, imageReferenceRoot)));
-                currentPages = new List<PageContent>();
-            }
-
-            if (currentPages.Count == 0 && splitTitle is not null)
-                currentTitle = splitTitle;
-
-            currentPages.Add(page);
-        }
-
-        if (currentPages.Count > 0)
-        {
-            parts.Add(new HtmlDocumentPart(
-                currentTitle,
-                RenderDocument(currentTitle, currentPages, imagesByPage, imagesDirectory, imageReferenceRoot)));
-        }
-
-        return parts;
+        return new ConversionResult<HtmlDocumentPart>(parts, document.Warnings);
     }
 
     private static string RenderDocument(
         string title,
         IReadOnlyList<PageContent> pages,
-        IReadOnlyDictionary<int, List<PageImage>> imagesByPage,
+        IReadOnlyDictionary<int, IReadOnlyList<PageImage>> imagesByPage,
         string? imagesDirectory,
         string? imageReferenceRoot)
     {

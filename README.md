@@ -9,8 +9,10 @@ A **C# 10** command-line tool built with [Spectre.Console](https://spectreconsol
 - 📄 Convert any PDF to **Markdown** or **HTML** (or both at once)
 - 🖼️ Extract images automatically into `./images/` and reference them with relative paths in both Markdown and HTML
 - 🖼️ **Extract embedded images** from PDFs and save them as `.png` / `.jpg` files
+- ⚠️ Continue converting when an image cannot be decoded, and report skipped images as CLI warnings
 - 🔤 **Automatic heading detection** based on font size (H1, H2, H3)
 - ✂️ Split Markdown and HTML output into multiple files when a new H1/title page is detected
+- ♻️ Parse the PDF once when generating both Markdown and HTML outputs
 - 📊 **Beautiful CLI output** with progress bars and results table (powered by Spectre.Console)
 - ✅ Validates input and provides clear error messages
 
@@ -27,7 +29,13 @@ A **C# 10** command-line tool built with [Spectre.Console](https://spectreconsol
 ### Build
 
 ```bash
-dotnet build PDF2MD/Pdf2Md.csproj -c Release
+dotnet build pdf2md.slnx -c Release
+```
+
+### Test
+
+```bash
+dotnet test pdf2md.slnx -c Release
 ```
 
 ### Run
@@ -115,6 +123,8 @@ Given `document.pdf`, the tool produces:
 
 Images are extracted to a sibling `images` directory by default and referenced as `./images/...` in both the generated Markdown and HTML outputs.
 
+If an embedded image cannot be decoded or written, conversion continues and the CLI prints a warning showing the page and image index that were skipped.
+
 ---
 
 ## Project Structure
@@ -123,18 +133,33 @@ Images are extracted to a sibling `images` directory by default and referenced a
 pdf2md.slnx
 PDF2MD/
 ├── Pdf2Md.csproj
+├── ApplicationVersion.cs      # Reads CLI version from assembly metadata
 ├── Program.cs
 ├── Commands/
 │   ├── ConvertCommand.cs    # Main Spectre.Console command
 │   └── ConvertSettings.cs  # CLI options and validation
 ├── Converters/
+│   ├── DocumentPartSplitter.cs # Shared split-by-title orchestration
+│   ├── PdfDocumentLoader.cs    # Shared PDF load/extract pipeline
 │   ├── PdfPageParser.cs     # Shared PDF text extraction logic
 │   ├── PdfToMarkdownConverter.cs
 │   └── PdfToHtmlConverter.cs
 ├── Extractors/
 │   └── ImageExtractor.cs   # PDF image extraction
-└── Models/
-    └── PageContent.cs      # Shared data models
+├── Models/
+│   ├── ConversionResult.cs
+│   ├── ImageExtractionResult.cs
+│   ├── ImageExtractionWarning.cs
+│   ├── LoadedPdfDocument.cs
+│   └── PageContent.cs      # Shared data models
+└── Properties/
+    └── AssemblyInfo.cs
+
+PDF2MD.Tests/
+├── ApplicationVersionTests.cs
+├── DocumentPartSplitterTests.cs
+├── ImageExtractorTests.cs
+└── ImageReferencePathTests.cs
 ```
 
 ---
