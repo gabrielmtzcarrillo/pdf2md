@@ -1,5 +1,3 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Pdf2Md/Pdf2Md.csproj" />
-  </Folder>
+  <Project Path="PDF2MD/Pdf2Md.csproj" />
 </Solution>

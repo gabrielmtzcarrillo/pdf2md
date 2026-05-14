@@ -27,19 +27,19 @@ A **C# 10** command-line tool built with [Spectre.Console](https://spectreconsol
 ### Build
 
 ```bash
-dotnet build src/Pdf2Md/Pdf2Md.csproj -c Release
+dotnet build PDF2MD/Pdf2Md.csproj -c Release
 ```
 
 ### Run
 
 ```bash
-dotnet run --project src/Pdf2Md/Pdf2Md.csproj -- <input.pdf> [options]
+dotnet run --project PDF2MD/Pdf2Md.csproj -- <input.pdf> [options]
 ```
 
 Or publish a self-contained executable:
 
 ```bash
-dotnet publish src/Pdf2Md/Pdf2Md.csproj -c Release -o ./out
+dotnet publish PDF2MD/Pdf2Md.csproj -c Release -o ./out
 ./out/pdf2md <input.pdf> [options]
 ```
 
@@ -120,22 +120,21 @@ Images are extracted to a sibling `images` directory by default and referenced a
 ## Project Structure
 
 ```
-pdf2md.sln
-src/
-└── Pdf2Md/
-    ├── Pdf2Md.csproj
-    ├── Program.cs
-    ├── Commands/
-    │   ├── ConvertCommand.cs    # Main Spectre.Console command
-    │   └── ConvertSettings.cs  # CLI options and validation
-    ├── Converters/
-    │   ├── PdfPageParser.cs     # Shared PDF text extraction logic
-    │   ├── PdfToMarkdownConverter.cs
-    │   └── PdfToHtmlConverter.cs
-    ├── Extractors/
-    │   └── ImageExtractor.cs   # PDF image extraction
-    └── Models/
-        └── PageContent.cs      # Shared data models
+pdf2md.slnx
+PDF2MD/
+├── Pdf2Md.csproj
+├── Program.cs
+├── Commands/
+│   ├── ConvertCommand.cs    # Main Spectre.Console command
+│   └── ConvertSettings.cs  # CLI options and validation
+├── Converters/
+│   ├── PdfPageParser.cs     # Shared PDF text extraction logic
+│   ├── PdfToMarkdownConverter.cs
+│   └── PdfToHtmlConverter.cs
+├── Extractors/
+│   └── ImageExtractor.cs   # PDF image extraction
+└── Models/
+    └── PageContent.cs      # Shared data models
 ```
 
 ---
